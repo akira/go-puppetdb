@@ -113,6 +113,12 @@ func (c *Client) Nodes() ([]NodeJson, error) {
 	return ret, err
 }
 
+func (c *Client) FactNames() ([]string, error) {
+    ret := []string{}
+    err := c.Get(&ret, "fact-names", nil)
+    return ret, err
+}
+
 func (c *Client) NodeFacts(node string) ([]FactJson, error) {
 	url := fmt.Sprintf("nodes/%s/facts", node)
 	ret := []FactJson{}
