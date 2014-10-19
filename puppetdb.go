@@ -126,6 +126,13 @@ func (c *Client) NodeFacts(node string) ([]FactJson, error) {
 	return ret, err
 }
 
+func (c *Client) FactPerNode(fact string) ([]FactJson, error) {
+	url := fmt.Sprintf("facts/%s", fact)
+	ret := []FactJson{}
+	err := c.Get(&ret, url, nil)
+	return ret, err
+}
+
 func (c *Client) EventCounts(query string, summarizeBy string, extraParams map[string]string) ([]EventCountJson, error) {
 	path := "event-counts"
 	ret := []EventCountJson{}
