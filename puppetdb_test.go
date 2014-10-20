@@ -61,6 +61,27 @@ func TestNodes(t *testing.T) {
 	}
 }
 
+func TestFactNames(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v3/fact-names",
+		func(w http.ResponseWriter, r *http.Request) {
+			testMethod(t, r, "GET")
+			fmt.Fprint(w, `[ "fact1", "fact2", "fact3" ]`)
+		})
+
+	facts, err := client.FactNames()
+	if err != nil {
+		t.Errorf("FactNames() returned error: %v", err)
+	}
+    want := []string{"fact1", "fact2", "fact3"}
+	if !reflect.DeepEqual(facts, want) {
+		t.Errorf("FactNames() returned %+v, want %+v",
+			facts, want)
+	}
+}
+
 func TestNodeFacts(t *testing.T) {
 	setup()
 	defer teardown()
