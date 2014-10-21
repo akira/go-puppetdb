@@ -201,6 +201,6 @@ func mergeParam(paramName string, paramValue string, params map[string]string) m
 func (c *Client) httpGet(endpoint string) (resp *http.Response, err error) {
 	base := strings.TrimRight(c.BaseURL, "/")
 	url := fmt.Sprintf("%s/v3/%s", base, endpoint)
-	log.Printf(url)
+	//log.Printf(url)
 	return c.httpClient.Get(url)
 }
