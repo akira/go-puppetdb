@@ -75,7 +75,7 @@ func TestFactNames(t *testing.T) {
 	if err != nil {
 		t.Errorf("FactNames() returned error: %v", err)
 	}
-    want := []string{"fact1", "fact2", "fact3"}
+	want := []string{"fact1", "fact2", "fact3"}
 	if !reflect.DeepEqual(facts, want) {
 		t.Errorf("FactNames() returned %+v, want %+v",
 			facts, want)
@@ -126,6 +126,27 @@ func TestMetricResourcesPerNode(t *testing.T) {
 	if want != value {
 		t.Errorf("Nodes() returned %f, want %f",
 			value, want)
+	}
+}
+
+func TestPuppetdbVersion(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v3/version",
+		func(w http.ResponseWriter, r *http.Request) {
+			testMethod(t, r, "GET")
+			fmt.Fprint(w, `{ "version" : "2.2.0" },`)
+		})
+
+	facts, err := client.PuppetdbVersion()
+	if err != nil {
+		t.Errorf("PuppetdbVersion() returned error: %v", err)
+	}
+	want := PuppetdbVersion{"2.2.0"}
+	if !reflect.DeepEqual(facts, want) {
+		t.Errorf("PuppetdbVersion() returned %+v, want %+v",
+			facts, want)
 	}
 }
 
