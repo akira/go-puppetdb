@@ -38,5 +38,7 @@ query, err := puppetdb.QueryToJson([]string{"=", "report", "aef00"})
 resp, res_err := client.Events(query, nil)
 ```
 
+# Contributors
 
+Malte Krupa (temal-)
 
