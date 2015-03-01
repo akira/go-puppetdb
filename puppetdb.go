@@ -15,6 +15,7 @@ type Client struct {
 	PublicKey  string
 	SecretKey  string
 	httpClient *http.Client
+	verbose    bool
 }
 
 type EventCountJson struct {
@@ -76,10 +77,10 @@ type ValueMetricJson struct {
 	Value float64
 }
 
-func NewClient(baseUrl string) *Client {
+func NewClient(baseUrl string, verbose bool) *Client {
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	client := &http.Client{Transport: tr}
-	return &Client{baseUrl, "", "", client}
+	return &Client{baseUrl, "", "", client, verbose}
 }
 
 func (c *Client) Get(v interface{}, path string, params map[string]string) error {
@@ -201,6 +202,8 @@ func mergeParam(paramName string, paramValue string, params map[string]string) m
 func (c *Client) httpGet(endpoint string) (resp *http.Response, err error) {
 	base := strings.TrimRight(c.BaseURL, "/")
 	url := fmt.Sprintf("%s/v3/%s", base, endpoint)
-	log.Printf(url)
+	if c.verbose == true {
+		log.Printf(url)
+	}
 	return c.httpClient.Get(url)
 }

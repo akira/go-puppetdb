@@ -21,7 +21,7 @@ func setup() {
 
 	serverUrl, _ := url.Parse(server.URL)
 
-	client = NewClient(serverUrl.String())
+	client = NewClient(serverUrl.String(), true)
 }
 
 func teardown() {
