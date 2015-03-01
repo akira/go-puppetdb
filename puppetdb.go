@@ -59,6 +59,10 @@ type NodeJson struct {
 	ReportTimestamp  string `json:"report_timestamp"`
 }
 
+type PuppetdbVersion struct {
+	Version string `json:"version"`
+}
+
 type ReportJson struct {
 	CertName             string `json:"certname"`
 	PuppetVersion        string `json:"puppet-version"`
@@ -114,9 +118,9 @@ func (c *Client) Nodes() ([]NodeJson, error) {
 }
 
 func (c *Client) FactNames() ([]string, error) {
-    ret := []string{}
-    err := c.Get(&ret, "fact-names", nil)
-    return ret, err
+	ret := []string{}
+	err := c.Get(&ret, "fact-names", nil)
+	return ret, err
 }
 
 func (c *Client) NodeFacts(node string) ([]FactJson, error) {
@@ -179,6 +183,13 @@ func (c *Client) Reports(query string, extraParams map[string]string) ([]ReportJ
 	return ret, err
 }
 
+func (c *Client) PuppetdbVersion() (PuppetdbVersion, error) {
+	path := "version"
+	ret := PuppetdbVersion{}
+	err := c.Get(&ret, path, nil)
+	return ret, err
+}
+
 func QueryToJson(query interface{}) (result string, err error) {
 	resultBytes, err := json.Marshal(query)
 	jsonQuery := string(resultBytes[:])
@@ -201,6 +212,5 @@ func mergeParam(paramName string, paramValue string, params map[string]string) m
 func (c *Client) httpGet(endpoint string) (resp *http.Response, err error) {
 	base := strings.TrimRight(c.BaseURL, "/")
 	url := fmt.Sprintf("%s/v3/%s", base, endpoint)
-	log.Printf(url)
 	return c.httpClient.Get(url)
 }
