@@ -22,7 +22,8 @@ import (
 Create a Client with PuppetDB Hostname:
 
 ```go
-client := puppetdb.NewClient("http://127.0.0.1:8080")
+// second parameter enables verbose output
+client := puppetdb.NewClient("http://127.0.0.1:8080", true)
 
 resp, err := client.Nodes()
 ...
@@ -41,4 +42,6 @@ resp, res_err := client.Events(query, nil)
 # Contributors
 
 Malte Krupa (temal-)
+
+Will Roberts (willroberts)
 
