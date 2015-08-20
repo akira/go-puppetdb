@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -84,6 +85,12 @@ type ValueMetricJson struct {
 func NewClient(baseUrl string, verbose bool) *Client {
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	client := &http.Client{Transport: tr}
+	return &Client{baseUrl, "", "", client, verbose}
+}
+
+func NewClientWithTimeout(baseUrl string, verbose bool, timeout int) *Client {
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	client := &http.Client{Transport: tr, Timeout: time.Duration(timeout) * time.Second}
 	return &Client{baseUrl, "", "", client, verbose}
 }
 
