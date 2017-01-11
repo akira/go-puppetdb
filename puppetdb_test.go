@@ -38,7 +38,7 @@ func TestNodes(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v3/nodes",
+	mux.HandleFunc("/v4/nodes",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{"name":"nodename",
@@ -65,7 +65,7 @@ func TestFactNames(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v3/fact-names",
+	mux.HandleFunc("/v4/fact-names",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[ "fact1", "fact2", "fact3" ]`)
@@ -86,7 +86,7 @@ func TestNodeFacts(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v3/nodes/node123/facts",
+	mux.HandleFunc("/v4/nodes/node123/facts",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{"certname" : "node123",
@@ -111,7 +111,7 @@ func TestMetricResourcesPerNode(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v3/metrics/mbean/com.puppetlabs.puppetdb.query.population:type=default,name=avg-resources-per-node",
+	mux.HandleFunc("/v4/metrics/mbean/com.puppetlabs.puppetdb.query.population:type=default,name=avg-resources-per-node",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `{"Value" : 309.130}`)
@@ -133,7 +133,7 @@ func TestPuppetdbVersion(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v3/version",
+	mux.HandleFunc("/v4/version",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `{ "version" : "2.2.0" },`)
@@ -154,7 +154,7 @@ func TestNodeReports(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v3/reports",
+	mux.HandleFunc("/v4/reports",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{
@@ -186,7 +186,7 @@ func TestEventCounts(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v3/event-counts",
+	mux.HandleFunc("/v4/event-counts",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{
