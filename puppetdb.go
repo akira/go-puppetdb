@@ -78,6 +78,18 @@ type ReportJson struct {
 	ReceiveTime          string `json:"receive-time"`
 }
 
+//Resource contains information about a puppet resource.
+type Resource struct {
+	Paramaters map[string]interface{} `json:"parameters"`
+	Line       int                    `json:"line,omitempty"`
+	Exported   bool                   `json:"exported,omitempty"`
+	Tags       []string               `json:"tags,omitempty"`
+	Title      string                 `json:"title,omitempty"`
+	Type       string                 `json:"type,omitempty"`
+	Resource   string                 `json:"resource,omitempty"`
+	Certname   string                 `json:"certname,omitempty"`
+}
+
 type ValueMetricJson struct {
 	Value float64
 }
@@ -160,6 +172,14 @@ func (c *Client) Events(query string, extraParams map[string]string) ([]EventJso
 	params := mergeParam("query", query, extraParams)
 	err := c.Get(&ret, path, params)
 	return ret, err
+}
+
+//Resources will fetch resources from /resources/ in the puppetdb api
+func (c *Client) Resources(query string, extraParams map[string]string) ([]Resource, error) {
+	in := []Resource{}
+	params := mergeParam("query", query, extraParams)
+	err := c.Get(&in, "resources", params)
+	return in, err
 }
 
 func (c *Client) Metric(v interface{}, metric string) error {
