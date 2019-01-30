@@ -151,8 +151,9 @@ func NewClientSSL(host string, port int, key string, cert string, ca string, ver
 
 	// Setup HTTPS client
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert2},
-		RootCAs:      caCertPool,
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{cert2},
+		RootCAs:            caCertPool,
 	}
 	tlsConfig.BuildNameToCertificate()
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
@@ -186,8 +187,9 @@ func NewClientTimeoutSSL(host string, port int, key string, cert string, ca stri
 
 	// Setup HTTPS client
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert2},
-		RootCAs:      caCertPool,
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{cert2},
+		RootCAs:            caCertPool,
 	}
 	tlsConfig.BuildNameToCertificate()
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
