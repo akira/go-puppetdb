@@ -25,7 +25,7 @@ Create a Client with PuppetDB Hostname:
 
 ```go
 // second parameter enables verbose output
-client := puppetdb.NewClient("http://127.0.0.1:8080", true)
+client := puppetdb.NewClient("localhost", 8080, true)
 
 resp, err := client.Nodes()
 ...
@@ -33,6 +33,15 @@ resp, err := client.NodeFacts("node123")
 ...
 ```
 
+It's also possible to use tls
+```go
+client := puppetdb.NewClientSSL("puppet", 8081,"key.pem", "cert.pem", "ca.pem", true)
+
+resp, err := client.Nodes()
+...
+resp, err := client.NodeFacts("node123")
+...
+```
 
 Queries can be represented as an array of strings and turned into JSON:
 
