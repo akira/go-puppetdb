@@ -2,9 +2,11 @@ package puppetdb
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -133,15 +135,24 @@ func NewClient(host string, port int, verbose bool) *Client {
 }
 
 // NewClientSSL returns a https connection for your puppetdb instance.
-func NewClientSSL(host string, port int, key string, cert string, verbose bool) *Client {
+func NewClientSSL(host string, port int, key string, cert string, ca string, verbose bool) *Client {
 	flag.Parse()
 	cert2, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Load CA cert
+	caCert, err := ioutil.ReadFile(ca)
+	if err != nil {
+		log.Fatal(err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	// Setup HTTPS client
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
-		Certificates:       []tls.Certificate{cert2},
+		Certificates: []tls.Certificate{cert2},
+		RootCAs:      caCertPool,
 	}
 	tlsConfig.BuildNameToCertificate()
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
@@ -159,15 +170,24 @@ func NewClientTimeout(host string, port int, verbose bool, timeout int) *Client 
 }
 
 // NewClientTimeoutSSL returns a http connection for your puppetdb instance with a timeout and ssl configured.
-func NewClientTimeoutSSL(host string, port int, key string, cert string, verbose bool, timeout int) *Client {
+func NewClientTimeoutSSL(host string, port int, key string, cert string, ca string, verbose bool, timeout int) *Client {
 	flag.Parse()
 	cert2, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Load CA cert
+	caCert, err := ioutil.ReadFile(ca)
+	if err != nil {
+		log.Fatal(err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	// Setup HTTPS client
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
-		Certificates:       []tls.Certificate{cert2},
+		Certificates: []tls.Certificate{cert2},
+		RootCAs:      caCertPool,
 	}
 	tlsConfig.BuildNameToCertificate()
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
