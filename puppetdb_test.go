@@ -19,9 +19,9 @@ func setup() {
 	mux = http.NewServeMux()
 	server = httptest.NewServer(mux)
 
-	serverUrl, _ := url.Parse(server.URL)
+	serverURL, _ := url.Parse(server.URL)
 
-	client = NewClient(serverUrl.String(), true)
+	client = NewClient(serverURL.String(), 8080, true)
 }
 
 func teardown() {
@@ -41,11 +41,23 @@ func TestNodes(t *testing.T) {
 	mux.HandleFunc("/v4/nodes",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
-			fmt.Fprint(w, `[{"name":"nodename",
-							 "deactivated":null,
-							 "catalog_timestamp" : "2014-01-10T21:17:03.467Z",
-							 "facts_timestamp" : "2014-01-10T21:15:40.933Z",
-							 "report_timestamp" : "2014-01-10T21:17:30.877Z" }]`)
+			fmt.Fprint(w, `[{"deactivated": "null",
+				"latest_report_hash": "somehashqsdnqosdnlq",
+				"facts_environment": "development",
+				"cached_catalog_status": "on_failure",
+				"report_environment": "development",
+				"latest_report_corrective_change": "",
+				"catalog_environment": "development",
+				"facts_timestamp": "2019-01-30T09:46:27.804Z",
+				"latest_report_noop": false,
+				"expired": "",
+				"latest_report_noop_pending": false,
+				"report_timestamp": "2019-01-30T09:46:31.347Z",
+				"certname": "nodename",
+				"catalog_timestamp": "2018-12-07T08:46:24.216Z",
+				"latest_report_job_id": "",
+				"latest_report_status": "unchanged"			
+							 }]`)
 		})
 
 	nodes, err := client.Nodes()
@@ -53,8 +65,11 @@ func TestNodes(t *testing.T) {
 		t.Errorf("Nodes() returned error: %v", err)
 	}
 
-	want := []NodeJson{NodeJson{"nodename", "", "2014-01-10T21:17:03.467Z", "2014-01-10T21:15:40.933Z",
-		"2014-01-10T21:17:30.877Z"}}
+	want := []NodeJSON{NodeJSON{"nodename", "", "2018-12-07T08:46:24.216Z",
+		"2019-01-30T09:46:27.804Z", "development", "development",
+		"somehashqsdnqosdnlq", "on_failure", "development",
+		"2019-01-30T09:46:31.347Z", "", false,
+		false, "", "", "unchanged"}}
 	if !reflect.DeepEqual(nodes, want) {
 		t.Errorf("Nodes() returned %+v, want %+v",
 			nodes, want)
@@ -91,7 +106,8 @@ func TestNodeFacts(t *testing.T) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{"certname" : "node123",
 			  				 "name" : "uptime_seconds",
-			  				 "value" : "9708003"
+							   "value" : "9708003",
+							   "environment": "production"
 							}]`)
 		})
 
@@ -100,7 +116,7 @@ func TestNodeFacts(t *testing.T) {
 		t.Errorf("NodesFacts() returned error: %v", err)
 	}
 
-	want := []FactJson{FactJson{"node123", "uptime_seconds", "9708003"}}
+	var want = []FactJSON{FactJSON{"node123", "uptime_seconds", "9708003", "prduction"}}
 	if !reflect.DeepEqual(facts, want) {
 		t.Errorf("NodeFacts() returned %+v, want %+v",
 			facts, want)
@@ -174,7 +190,7 @@ func TestNodeReports(t *testing.T) {
 	if err != nil {
 		t.Errorf("NodesReports() returned error: %v", err)
 	}
-	want := []ReportJson{ReportJson{"node123", "3.2.4-1", "", "abcdefg", 3, "1388423716", "",
+	want := []ReportJSON{ReportJSON{"node123", "3.2.4-1", "", "abcdefg", 3, "1388423716", "",
 		"2013-12-30T19:15:05.314Z", "2013-12-30T19:15:51.521Z", "2013-12-30T19:16:14.911Z"}}
 	if !reflect.DeepEqual(facts, want) {
 		t.Errorf("NodeReports() returned %+v, want %+v",
@@ -205,7 +221,7 @@ func TestEventCounts(t *testing.T) {
 	if err != nil {
 		t.Errorf("EventCount() returned error: %v", err)
 	}
-	want := []EventCountJson{EventCountJson{"certname", map[string]string{"title": "node123"}, 0, 1, 0, 0}}
+	want := []EventCountJSON{EventCountJSON{"certname", map[string]string{"title": "node123"}, 0, 1, 0, 0}}
 	if !reflect.DeepEqual(facts, want) {
 		t.Errorf("EventCount() returned %+v, want %+v",
 			facts, want)

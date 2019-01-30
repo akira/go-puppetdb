@@ -3,6 +3,7 @@ package puppetdb
 import (
 	"crypto/tls"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,15 +12,17 @@ import (
 	"time"
 )
 
+// Client This represents a connection to your puppetdb instance
 type Client struct {
 	BaseURL    string
-	PublicKey  string
-	SecretKey  string
+	Cert       string
+	Key        string
 	httpClient *http.Client
 	verbose    bool
 }
 
-type EventCountJson struct {
+// EventCountJSON A json object holding the results of a query to the eventcount api
+type EventCountJSON struct {
 	SubjectType string            `json:"subject-type"`
 	Subject     map[string]string `json:"subject"`
 	Failure     int64             `json:"failures"`
@@ -28,7 +31,8 @@ type EventCountJson struct {
 	Skips       int64             `json:"skips"`
 }
 
-type EventJson struct {
+// EventJSON A json object holding the results of a query to the event api.
+type EventJSON struct {
 	CertName          string `json:"certname"`
 	OldValue          string `json:"old-value"`
 	Property          string `json:"message"`
@@ -47,25 +51,41 @@ type EventJson struct {
 	ReportReceiveTime string `json:"report-receive-time"`
 }
 
-type FactJson struct {
-	CertName string `json:"certname"`
-	Name     string `json:"name"`
-	Value    string `json:"value"`
+// FactJSON A json object holding the results of a query to the facts api.
+type FactJSON struct {
+	CertName    string `json:"certname"`
+	Environment string `json:"environment"`
+	Name        string `json:"name"`
+	Value       string `json:"value"`
 }
 
-type NodeJson struct {
-	Name             string `json:"name"`
-	Deactivated      string `json:"deactivated"`
-	CatalogTimestamp string `json:"catalog_timestamp"`
-	FactsTimestamp   string `json:"facts_timestamp"`
-	ReportTimestamp  string `json:"report_timestamp"`
+// NodeJSON A json object holding the results of query to the node api.
+type NodeJSON struct {
+	Certname                     string `json:"certname"`
+	Deactivated                  string `json:"deactivated"`
+	CatalogTimestamp             string `json:"catalog_timestamp"`
+	FactsTimestamp               string `json:"facts_timestamp"`
+	CatalogEnvironment           string `json:"catalog_environment"`
+	FactsEnvironment             string `json:"facts_environment"`
+	LatestReportHash             string `json:"latest_report_hash"`
+	CachedCatalogStatus          string `json:"cached_catalog_status"`
+	ReportEnvironment            string `json:"report_environment"`
+	ReportTimestamp              string `json:"report_timestamp"`
+	LatestReportCorrectiveChange string `json:"latest_report_corrective_change"`
+	LatestReportNoop             bool   `json:"latest_report_noop"`
+	LatestReportNoopPending      bool   `json:"latest_report_noop_pending"`
+	Expired                      string `json:"expired"`
+	LatestReportJobID            string `json:"latest_report_job_id"`
+	LatestReportStatus           string `json:"latest_report_status"`
 }
 
+// PuppetdbVersion a simple struct holding the puppetdb version.
 type PuppetdbVersion struct {
 	Version string `json:"version"`
 }
 
-type ReportJson struct {
+// ReportJSON A json abject holding the data for a query from the report api.
+type ReportJSON struct {
 	CertName             string `json:"certname"`
 	PuppetVersion        string `json:"puppet-version"`
 	Value                string `json:"value"`
@@ -90,22 +110,73 @@ type Resource struct {
 	Certname   string                 `json:"certname,omitempty"`
 }
 
-type ValueMetricJson struct {
+// ValueMetricJSON A simple structholding a float value.
+type ValueMetricJSON struct {
 	Value float64
 }
 
-func NewClient(baseUrl string, verbose bool) *Client {
+// getURL return the address of the puppetdb instance.
+func getURL(host string, port int, ssl bool) string {
+	if ssl {
+		return fmt.Sprintf("https://%s:%v", host, port)
+	} else {
+		return fmt.Sprintf("http://%s:%v", host, port)
+	}
+}
+
+// NewClient returns a http connection for your puppetdb instance.
+func NewClient(host string, port int, verbose bool) *Client {
+
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	client := &http.Client{Transport: tr}
-	return &Client{baseUrl, "", "", client, verbose}
+	return &Client{getURL(host, port, false), "", "", client, verbose}
 }
 
-func NewClientWithTimeout(baseUrl string, verbose bool, timeout int) *Client {
+// NewClientSSL returns a https connection for your puppetdb instance.
+func NewClientSSL(host string, port int, key string, cert string, verbose bool) *Client {
+	flag.Parse()
+	cert2, err := tls.LoadX509KeyPair(cert, key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{cert2},
+	}
+	tlsConfig.BuildNameToCertificate()
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: transport}
+	return &Client{getURL(host, port, true), cert, key, client, verbose}
+
+}
+
+// NewClientTimeout returns a http connection for your puppetdb instance with a timeout.
+func NewClientTimeout(host string, port int, verbose bool, timeout int) *Client {
+
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	client := &http.Client{Transport: tr, Timeout: time.Duration(timeout) * time.Second}
-	return &Client{baseUrl, "", "", client, verbose}
+	return &Client{getURL(host, port, false), "", "", client, verbose}
 }
 
+// NewClientTimeoutSSL returns a http connection for your puppetdb instance with a timeout and ssl configured.
+func NewClientTimeoutSSL(host string, port int, key string, cert string, verbose bool, timeout int) *Client {
+	flag.Parse()
+	cert2, err := tls.LoadX509KeyPair(cert, key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{cert2},
+	}
+	tlsConfig.BuildNameToCertificate()
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: transport, Timeout: time.Duration(timeout) * time.Second}
+	return &Client{getURL(host, port, true), cert, key, client, verbose}
+
+}
+
+// Get gets the given url and retrusn the result. In form of the given interface.
 func (c *Client) Get(v interface{}, path string, params map[string]string) error {
 	pathAndParams := path
 	//TODO: Improve this
@@ -131,8 +202,9 @@ func (c *Client) Get(v interface{}, path string, params map[string]string) error
 	return err
 }
 
-func (c *Client) Nodes() ([]NodeJson, error) {
-	ret := []NodeJson{}
+// Nodes Polls the nodes api of your puppetdb and returns the results in form of the NodeJSON type.
+func (c *Client) Nodes() ([]NodeJSON, error) {
+	ret := []NodeJSON{}
 	err := c.Get(&ret, "nodes", nil)
 	return ret, err
 }
@@ -143,32 +215,32 @@ func (c *Client) FactNames() ([]string, error) {
 	return ret, err
 }
 
-func (c *Client) NodeFacts(node string) ([]FactJson, error) {
-	url := fmt.Sprintf("nodes/%s/facts", node)
-	ret := []FactJson{}
-	err := c.Get(&ret, url, nil)
+func (c *Client) NodeFacts(node string) ([]FactJSON, error) {
+	pUrl := fmt.Sprintf("nodes/%s/facts", node)
+	ret := []FactJSON{}
+	err := c.Get(&ret, pUrl, nil)
 	return ret, err
 }
 
-func (c *Client) FactPerNode(fact string) ([]FactJson, error) {
-	url := fmt.Sprintf("facts/%s", fact)
-	ret := []FactJson{}
-	err := c.Get(&ret, url, nil)
+func (c *Client) FactPerNode(fact string) ([]FactJSON, error) {
+	pUrl := fmt.Sprintf("facts/%s", fact)
+	ret := []FactJSON{}
+	err := c.Get(&ret, pUrl, nil)
 	return ret, err
 }
 
-func (c *Client) EventCounts(query string, summarizeBy string, extraParams map[string]string) ([]EventCountJson, error) {
+func (c *Client) EventCounts(query string, summarizeBy string, extraParams map[string]string) ([]EventCountJSON, error) {
 	path := "event-counts"
-	ret := []EventCountJson{}
+	ret := []EventCountJSON{}
 	params := mergeParam("query", query, extraParams)
 	params = mergeParam("summarize-by", summarizeBy, params)
 	err := c.Get(&ret, path, params)
 	return ret, err
 }
 
-func (c *Client) Events(query string, extraParams map[string]string) ([]EventJson, error) {
+func (c *Client) Events(query string, extraParams map[string]string) ([]EventJSON, error) {
 	path := "events"
-	ret := []EventJson{}
+	ret := []EventJSON{}
 	params := mergeParam("query", query, extraParams)
 	err := c.Get(&ret, path, params)
 	return ret, err
@@ -183,29 +255,29 @@ func (c *Client) Resources(query string, extraParams map[string]string) ([]Resou
 }
 
 func (c *Client) Metric(v interface{}, metric string) error {
-	url := fmt.Sprintf("metrics/mbean/%s", metric)
-	err := c.Get(&v, url, nil)
+	pUrl := fmt.Sprintf("metrics/mbean/%s", metric)
+	err := c.Get(&v, pUrl, nil)
 	return err
 }
 
 func (c *Client) MetricResourcesPerNode() (result float64, err error) {
-	ret := ValueMetricJson{}
+	ret := ValueMetricJSON{}
 	return ret.Value, c.Metric(&ret, "com.puppetlabs.puppetdb.query.population:type=default,name=avg-resources-per-node")
 }
 
 func (c *Client) MetricNumResources() (result float64, err error) {
-	ret := ValueMetricJson{}
+	ret := ValueMetricJSON{}
 	return ret.Value, c.Metric(&ret, "com.puppetlabs.puppetdb.query.population:type=default,name=num-resources")
 }
 
 func (c *Client) MetricNumNodes() (result float64, err error) {
-	ret := ValueMetricJson{}
+	ret := ValueMetricJSON{}
 	return ret.Value, c.Metric(&ret, "com.puppetlabs.puppetdb.query.population:type=default,name=num-nodes")
 }
 
-func (c *Client) Reports(query string, extraParams map[string]string) ([]ReportJson, error) {
+func (c *Client) Reports(query string, extraParams map[string]string) ([]ReportJSON, error) {
 	path := "reports"
-	ret := []ReportJson{}
+	ret := []ReportJSON{}
 	params := mergeParam("query", query, extraParams)
 	err := c.Get(&ret, path, params)
 	return ret, err
@@ -239,9 +311,9 @@ func mergeParam(paramName string, paramValue string, params map[string]string) m
 
 func (c *Client) httpGet(endpoint string) (resp *http.Response, err error) {
 	base := strings.TrimRight(c.BaseURL, "/")
-	url := fmt.Sprintf("%s/v4/%s", base, endpoint)
+	pUrl := fmt.Sprintf("%s/pdb/query/v4/%s", base, endpoint)
 	if c.verbose == true {
-		log.Printf(url)
+		log.Printf(pUrl)
 	}
-	return c.httpClient.Get(url)
+	return c.httpClient.Get(pUrl)
 }
