@@ -2,10 +2,13 @@ package puppetdb
 
 import (
 	"fmt"
+	"github.com/Jeffail/gabs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -20,8 +23,9 @@ func setup() {
 	server = httptest.NewServer(mux)
 
 	serverURL, _ := url.Parse(server.URL)
-
-	client = NewClient(serverURL.String(), 8080, true)
+	splitsy := strings.Split(serverURL.Host, ":")
+	port, _ := strconv.Atoi(splitsy[1])
+	client = NewClient(splitsy[0], port, true)
 }
 
 func teardown() {
@@ -38,10 +42,10 @@ func TestNodes(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v4/nodes",
+	mux.HandleFunc("/pdb/query/v4/nodes",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
-			fmt.Fprint(w, `[{"deactivated": "null",
+			fmt.Fprint(w, `[{"deactivated": "",
 				"latest_report_hash": "somehashqsdnqosdnlq",
 				"facts_environment": "development",
 				"cached_catalog_status": "on_failure",
@@ -80,7 +84,7 @@ func TestFactNames(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v4/fact-names",
+	mux.HandleFunc("/pdb/query/v4/fact-names",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[ "fact1", "fact2", "fact3" ]`)
@@ -101,7 +105,7 @@ func TestNodeFacts(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v4/nodes/node123/facts",
+	mux.HandleFunc("/pdb/query/v4/nodes/node123/facts",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{"certname" : "node123",
@@ -116,7 +120,11 @@ func TestNodeFacts(t *testing.T) {
 		t.Errorf("NodesFacts() returned error: %v", err)
 	}
 
-	var want = []FactJSON{FactJSON{"node123", "uptime_seconds", "9708003", "prduction"}}
+	jsonParsed, err := gabs.ParseJSON([]byte(`
+		"9708003"
+
+	`))
+	var want = []FactJSON{FactJSON{"node123", "production", "uptime_seconds", jsonParsed}}
 	if !reflect.DeepEqual(facts, want) {
 		t.Errorf("NodeFacts() returned %+v, want %+v",
 			facts, want)
@@ -127,7 +135,7 @@ func TestMetricResourcesPerNode(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v4/metrics/mbean/com.puppetlabs.puppetdb.query.population:type=default,name=avg-resources-per-node",
+	mux.HandleFunc("/pdb/query/v4/metrics/mbean/com.puppetlabs.puppetdb.query.population:type=default,name=avg-resources-per-node",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `{"Value" : 309.130}`)
@@ -149,7 +157,7 @@ func TestPuppetdbVersion(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v4/version",
+	mux.HandleFunc("/pdb/query/v4/version",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `{ "version" : "2.2.0" },`)
@@ -159,7 +167,7 @@ func TestPuppetdbVersion(t *testing.T) {
 	if err != nil {
 		t.Errorf("PuppetdbVersion() returned error: %v", err)
 	}
-	want := PuppetdbVersion{"2.2.0"}
+	want := Version{"2.2.0"}
 	if !reflect.DeepEqual(facts, want) {
 		t.Errorf("PuppetdbVersion() returned %+v, want %+v",
 			facts, want)
@@ -170,7 +178,7 @@ func TestNodeReports(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v4/reports",
+	mux.HandleFunc("/pdb/query/v4/reports",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{
@@ -202,7 +210,7 @@ func TestEventCounts(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v4/event-counts",
+	mux.HandleFunc("/pdb/query/v4/event-counts",
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{
@@ -231,7 +239,7 @@ func TestEventCounts(t *testing.T) {
 func TestSimpleQuery(t *testing.T) {
 	query := []string{"=", "certname", "node123"}
 	want := `["=","certname","node123"]`
-	jsonQuery, _ := QueryToJson(query)
+	jsonQuery, _ := QueryToJSON(query)
 	if jsonQuery != want {
 		t.Errorf("SimpleQuery() returned %+v, want %+v",
 			jsonQuery, want)
@@ -241,7 +249,7 @@ func TestSimpleQuery(t *testing.T) {
 func TestNestedQuery(t *testing.T) {
 	query := []interface{}{"or", []string{"=", "certname", "node123"}, []string{"=", "certname", "node321"}}
 	want := `["or",["=","certname","node123"],["=","certname","node321"]]`
-	jsonQuery, _ := QueryToJson(query)
+	jsonQuery, _ := QueryToJSON(query)
 	if jsonQuery != want {
 		t.Errorf("SimpleQuery() returned %+v, want %+v",
 			jsonQuery, want)

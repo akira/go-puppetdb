@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/Jeffail/gabs"
 )
 
 // Client This represents a connection to your puppetdb instance
@@ -55,10 +57,10 @@ type EventJSON struct {
 
 // FactJSON A json object holding the results of a query to the facts api.
 type FactJSON struct {
-	CertName    string `json:"certname"`
-	Environment string `json:"environment"`
-	Name        string `json:"name"`
-	Value       string `json:"value"`
+	CertName    string          `json:"certname"`
+	Environment string          `json:"environment"`
+	Name        string          `json:"name"`
+	Value       *gabs.Container `json:"value"`
 }
 
 // NodeJSON A json object holding the results of query to the node api.
@@ -81,8 +83,8 @@ type NodeJSON struct {
 	LatestReportStatus           string `json:"latest_report_status"`
 }
 
-// PuppetdbVersion a simple struct holding the puppetdb version.
-type PuppetdbVersion struct {
+// Version a simple struct holding the puppetdb version.
+type Version struct {
 	Version string `json:"version"`
 }
 
@@ -196,7 +198,7 @@ func NewClientTimeoutSSL(host string, port int, key string, cert string, ca stri
 
 }
 
-// Get gets the given url and retrusn the result. In form of the given interface.
+// Get gets the given url and retruns the result. In form of the given interface.
 func (c *Client) Get(v interface{}, path string, params map[string]string) error {
 	pathAndParams := path
 	//TODO: Improve this
@@ -222,6 +224,44 @@ func (c *Client) Get(v interface{}, path string, params map[string]string) error
 	return err
 }
 
+// GetFacts returns an array of Json facts and returns them. It now uses gabs array because json value is not consistent.
+func (c *Client) GetFacts(path string) ([]FactJSON, error) {
+	pathAndParams := path
+	ret := []FactJSON{}
+	resp, err := c.httpGet(pathAndParams)
+	if err != nil {
+		log.Print(err)
+		return ret, err
+	}
+	defer resp.Body.Close()
+	if err != nil {
+		log.Print(err)
+		return ret, err
+	}
+	body, _ := ioutil.ReadAll(resp.Body)
+	jsonParsed, _ := gabs.ParseJSON(body)
+	count, err := jsonParsed.ArrayCount()
+	counter := 0
+	for counter < count {
+		something, _ := jsonParsed.ArrayElement(counter)
+		certname := something.Path("certname").Data().(string)
+		value := something.Path("value")
+		j := FactJSON{
+			certname,
+			something.Path("environment").Data().(string),
+			something.Path("name").Data().(string),
+			value,
+		}
+		ret = append(ret, j)
+		//c := value.Data()
+		//fmt.Println(reflect.TypeOf(c))
+		//println(c.(string)
+		counter++
+	}
+	return ret, err
+
+}
+
 // Nodes Polls the nodes api of your puppetdb and returns the results in form of the NodeJSON type.
 func (c *Client) Nodes() ([]NodeJSON, error) {
 	ret := []NodeJSON{}
@@ -229,26 +269,28 @@ func (c *Client) Nodes() ([]NodeJSON, error) {
 	return ret, err
 }
 
+// FactNames Gets all the fact names
 func (c *Client) FactNames() ([]string, error) {
 	ret := []string{}
 	err := c.Get(&ret, "fact-names", nil)
 	return ret, err
 }
 
+// NodeFacts Gets all the facts for a specified node.
 func (c *Client) NodeFacts(node string) ([]FactJSON, error) {
-	pUrl := fmt.Sprintf("nodes/%s/facts", node)
-	ret := []FactJSON{}
-	err := c.Get(&ret, pUrl, nil)
+	PUrl := fmt.Sprintf("nodes/%s/facts", node)
+	ret, err := c.GetFacts(PUrl)
 	return ret, err
 }
 
+// FactPerNode Gets all nodes values for a specified fact.
 func (c *Client) FactPerNode(fact string) ([]FactJSON, error) {
-	pUrl := fmt.Sprintf("facts/%s", fact)
-	ret := []FactJSON{}
-	err := c.Get(&ret, pUrl, nil)
+	PUrl := fmt.Sprintf("facts/%s", fact)
+	ret, err := c.GetFacts(PUrl)
 	return ret, err
 }
 
+// EventCounts Returns the even counts
 func (c *Client) EventCounts(query string, summarizeBy string, extraParams map[string]string) ([]EventCountJSON, error) {
 	path := "event-counts"
 	ret := []EventCountJSON{}
@@ -258,6 +300,7 @@ func (c *Client) EventCounts(query string, summarizeBy string, extraParams map[s
 	return ret, err
 }
 
+// Events returns the events
 func (c *Client) Events(query string, extraParams map[string]string) ([]EventJSON, error) {
 	path := "events"
 	ret := []EventJSON{}
@@ -274,12 +317,14 @@ func (c *Client) Resources(query string, extraParams map[string]string) ([]Resou
 	return in, err
 }
 
+// Metric returns a metric
 func (c *Client) Metric(v interface{}, metric string) error {
-	pUrl := fmt.Sprintf("metrics/mbean/%s", metric)
-	err := c.Get(&v, pUrl, nil)
+	PUrl := fmt.Sprintf("metrics/mbean/%s", metric)
+	err := c.Get(&v, PUrl, nil)
 	return err
 }
 
+// MetricResourcesPerNode Gets the specified metric per node.
 func (c *Client) MetricResourcesPerNode() (result float64, err error) {
 	ret := ValueMetricJSON{}
 	return ret.Value, c.Metric(&ret, "com.puppetlabs.puppetdb.query.population:type=default,name=avg-resources-per-node")
@@ -295,6 +340,7 @@ func (c *Client) MetricNumNodes() (result float64, err error) {
 	return ret.Value, c.Metric(&ret, "com.puppetlabs.puppetdb.query.population:type=default,name=num-nodes")
 }
 
+// Reports Gets the reports with the specified querry.
 func (c *Client) Reports(query string, extraParams map[string]string) ([]ReportJSON, error) {
 	path := "reports"
 	ret := []ReportJSON{}
@@ -303,14 +349,16 @@ func (c *Client) Reports(query string, extraParams map[string]string) ([]ReportJ
 	return ret, err
 }
 
-func (c *Client) PuppetdbVersion() (PuppetdbVersion, error) {
+// PuppetdbVersion gets the specified puppetdb version.
+func (c *Client) PuppetdbVersion() (Version, error) {
 	path := "version"
-	ret := PuppetdbVersion{}
+	ret := Version{}
 	err := c.Get(&ret, path, nil)
 	return ret, err
 }
 
-func QueryToJson(query interface{}) (result string, err error) {
+// QueryToJSON Converts a query to json.
+func QueryToJSON(query interface{}) (result string, err error) {
 	resultBytes, err := json.Marshal(query)
 	jsonQuery := string(resultBytes[:])
 	return jsonQuery, err
@@ -331,9 +379,9 @@ func mergeParam(paramName string, paramValue string, params map[string]string) m
 
 func (c *Client) httpGet(endpoint string) (resp *http.Response, err error) {
 	base := strings.TrimRight(c.BaseURL, "/")
-	pUrl := fmt.Sprintf("%s/pdb/query/v4/%s", base, endpoint)
+	PUrl := fmt.Sprintf("%s/pdb/query/v4/%s", base, endpoint)
 	if c.verbose == true {
-		log.Printf(pUrl)
+		log.Printf(PUrl)
 	}
-	return c.httpClient.Get(pUrl)
+	return c.httpClient.Get(PUrl)
 }
