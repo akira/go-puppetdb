@@ -88,18 +88,62 @@ type Version struct {
 	Version string `json:"version"`
 }
 
+type PuppetReportLog struct {
+	Href string                        `json:"href"`
+	Data []PuppetReportMetricsLogEntry `json:"data"`
+}
+
+type PuppetReportResource struct {
+	Href string `json:"href"`
+}
+type PuppetReportMetrics struct {
+	Href string                         `json:"href"`
+	Data []PuppetReportMetricsDataEntry `json:"data"`
+}
+
+type PuppetReportMetricsDataEntry struct {
+	Name     string `json:"name"`
+	Value    int    `json:"value"`
+	Category string `json:"category"`
+}
+
+type PuppetReportMetricsLogEntry struct {
+	NewValue string   `json:"new_value"`
+	Property string   `json:"property"`
+	File     string   `json:"file"`
+	Line     string   `json:"line"`
+	Tags     []string `json:"tags"`
+	Time     string   `json:"time"`
+	Level    string   `json:"level"`
+	Source   string   `json:"source"`
+	Message  string   `json:"message"`
+}
+
 // ReportJSON A json abject holding the data for a query from the report api.
 type ReportJSON struct {
-	CertName             string `json:"certname"`
-	PuppetVersion        string `json:"puppet-version"`
-	Value                string `json:"value"`
-	Hash                 string `json:"hash"`
-	ReportFormat         int64  `json:"report-format"`
-	ConfigurationVersion string `json:"configuration-version"`
-	TransactionUUID      string `json:"transaction-uuid"`
-	StartTime            string `json:"start-time"`
-	EndTime              string `json:"end-time"`
-	ReceiveTime          string `json:"receive-time"`
+	CertName             string               `json:"certname"`
+	PuppetVersion        string               `json:"puppet_version"`
+	Value                string               `json:"value"`
+	Hash                 string               `json:"hash"`
+	ReportFormat         int64                `json:"report_format"`
+	ConfigurationVersion string               `json:"configuration_version"`
+	CatalogUUID          string               `json:"catalog_uuid"`
+	TransactionUUID      string               `json:"transaction_uuid"`
+	StartTime            string               `json:"start_time"`
+	EndTime              string               `json:"end_time"`
+	ReceiveTime          string               `json:"receive_time"`
+	Noop                 bool                 `json:"noop"`
+	Producer             string               `json:"producer"`
+	CorrectiveChange     string               `json:"corrective_change"`
+	Logs                 PuppetReportLog      `json:"logs"`
+	ProducerTimestamp    string               `json:"producer_timestamp"`
+	CachedCatalogStatus  string               `json:"cached_catalog_status"`
+	ResourceEvents       PuppetReportResource `json:"resource_events"`
+	Status               string               `json:"Status"`
+	Environment          string               `json:"Environment"`
+	CodeID               string               `json:"code_id"`
+	NoopPending          bool                 `json:"noop_pending"`
+	Metrics              PuppetReportMetrics  `json:"metrics"`
 }
 
 //Resource contains information about a puppet resource.
@@ -345,6 +389,17 @@ func (c *Client) Reports(query string, extraParams map[string]string) ([]ReportJ
 	path := "reports"
 	ret := []ReportJSON{}
 	params := mergeParam("query", query, extraParams)
+	err := c.Get(&ret, path, params)
+	return ret, err
+}
+
+// ReportByHash Gets the report for this specific hash
+func (c *Client) ReportByHash(hash string) ([]ReportJSON, error) {
+	path := fmt.Sprintf("reports")
+	ret := []ReportJSON{}
+	q := fmt.Sprintf("[\"=\", \"hash\", \"%s\"]", hash)
+	params := mergeParam("query", q, nil)
+
 	err := c.Get(&ret, path, params)
 	return ret, err
 }

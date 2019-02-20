@@ -2,7 +2,6 @@ package puppetdb
 
 import (
 	"fmt"
-	"github.com/Jeffail/gabs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/Jeffail/gabs"
 )
 
 var (
@@ -182,15 +183,56 @@ func TestNodeReports(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			testMethod(t, r, "GET")
 			fmt.Fprint(w, `[{
-			  "certname" : "node123",
-			  "hash" : "abcdefg",
-			  "report-format" : 3,
-			  "start-time" : "2013-12-30T19:15:05.314Z",
-			  "end-time" : "2013-12-30T19:15:51.521Z",
-			  "puppet-version" : "3.2.4-1",
-			  "configuration-version" : "1388423716",
-			  "transaction-uuid" : null,
-			  "receive-time" : "2013-12-30T19:16:14.911Z"
+				"catalog_uuid": "3c77fcff-7e95-4129-a28f-af86566db52f",
+				"receive_time": "2019-02-19T13:27:21.312Z",
+				"producer": "puppet",
+				"hash": "ceb97994c50a968859dd44b90e14bb08e54e53ea",
+				"transaction_uuid": "005d2b4a-5a89-4096-9f81-ecc65f1e9082",
+				"puppet_version": "5.5.1",
+				"noop": false,
+				"corrective_change": null,
+				"logs": {
+					"data": [
+						{
+							"file": null,
+							"line": null,
+							"tags": [
+								"notice"
+							],
+							"time": "2019-02-19T14:27:21.032+01:00",
+							"level": "notice",
+							"source": "Puppet",
+							"message": "Applied catalog in 6.69 seconds"
+						}
+					],
+					"href": "/pdb/query/v4/reports/ceb97994c50a968859dd44b90e14bb08e54e53ea/logs"
+				},
+				"report_format": 9,
+				"start_time": "2019-02-19T13:27:04.740Z",
+				"producer_timestamp": "2019-02-19T13:27:21.282Z",
+				"cached_catalog_status": "not_used",
+				"end_time": "2019-02-19T13:27:20.973Z",
+				"resource_events": {
+					"data": null,
+					"href": "/pdb/query/v4/reports/ceb97994c50a968859dd44b90e14bb08e54e53ea/events"
+				},
+				"status": "unchanged",
+				"configuration_version": "1550582831",
+				"environment": "development",
+				"code_id": null,
+				"noop_pending": false,
+				"certname": "node",
+				"metrics": {
+					"data": [
+						{
+							"name": "changed",
+							"value": 0,
+							"category": "resources"
+						}
+					],
+					"href": "/pdb/query/v4/reports/ceb97994c50a968859dd44b90e14bb08e54e53ea/metrics"
+				},
+				"job_id": null
 			}]`)
 		})
 
@@ -198,8 +240,58 @@ func TestNodeReports(t *testing.T) {
 	if err != nil {
 		t.Errorf("NodesReports() returned error: %v", err)
 	}
-	want := []ReportJSON{ReportJSON{"node123", "3.2.4-1", "", "abcdefg", 3, "1388423716", "",
-		"2013-12-30T19:15:05.314Z", "2013-12-30T19:15:51.521Z", "2013-12-30T19:16:14.911Z"}}
+	want := []ReportJSON{ReportJSON{
+		CatalogUUID:          "3c77fcff-7e95-4129-a28f-af86566db52f",
+		ReceiveTime:          "2019-02-19T13:27:21.312Z",
+		Producer:             "puppet",
+		Hash:                 "ceb97994c50a968859dd44b90e14bb08e54e53ea",
+		TransactionUUID:      "005d2b4a-5a89-4096-9f81-ecc65f1e9082",
+		PuppetVersion:        "5.5.1",
+		Noop:                 false,
+		CorrectiveChange:     "",
+		ReportFormat:         9,
+		StartTime:            "2019-02-19T13:27:04.740Z",
+		ProducerTimestamp:    "2019-02-19T13:27:21.282Z",
+		CachedCatalogStatus:  "not_used",
+		EndTime:              "2019-02-19T13:27:20.973Z",
+		Status:               "unchanged",
+		ConfigurationVersion: "1550582831",
+		Environment:          "development",
+		CodeID:               "",
+		NoopPending:          false,
+		CertName:             "node",
+		ResourceEvents: PuppetReportResource{
+			Href: "/pdb/query/v4/reports/ceb97994c50a968859dd44b90e14bb08e54e53ea/events",
+		},
+		Logs: PuppetReportLog{
+			Data: []PuppetReportMetricsLogEntry{
+				PuppetReportMetricsLogEntry{
+					NewValue: "",
+					Property: "",
+					File:     "",
+					Line:     "",
+					Tags: []string{
+						"notice",
+					},
+					Time:    "2019-02-19T14:27:21.032+01:00",
+					Level:   "notice",
+					Source:  "Puppet",
+					Message: "Applied catalog in 6.69 seconds",
+				},
+			},
+			Href: "/pdb/query/v4/reports/ceb97994c50a968859dd44b90e14bb08e54e53ea/logs",
+		},
+		Metrics: PuppetReportMetrics{
+			Href: "/pdb/query/v4/reports/ceb97994c50a968859dd44b90e14bb08e54e53ea/metrics",
+			Data: []PuppetReportMetricsDataEntry{
+				PuppetReportMetricsDataEntry{
+					Name:     "changed",
+					Value:    0,
+					Category: "resources",
+				},
+			},
+		},
+	}}
 	if !reflect.DeepEqual(facts, want) {
 		t.Errorf("NodeReports() returned %+v, want %+v",
 			facts, want)

@@ -17,7 +17,7 @@ Run `go get github.com/akira/go-puppetdb`.
 
 ```go
 import (
-  "github.com/akira/go-puppetdb"
+  "github.com/negast/go-puppetdb"
 )
 ```
 
