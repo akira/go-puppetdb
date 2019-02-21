@@ -39,7 +39,7 @@ type EventCountJSON struct {
 type EventJSON struct {
 	CertName          string `json:"certname"`
 	OldValue          string `json:"old-value"`
-	Property          string `json:"message"`
+	Property          string `json:"property"`
 	Timestamp         string `json:"timestamp"`
 	ResourceType      string `json:"resource-typ"`
 	ResourceTitle     string `json:"resource-title"`
@@ -102,9 +102,9 @@ type PuppetReportMetrics struct {
 }
 
 type PuppetReportMetricsDataEntry struct {
-	Name     string `json:"name"`
-	Value    int    `json:"value"`
-	Category string `json:"category"`
+	Name     string  `json:"name"`
+	Value    float64 `json:"value"`
+	Category string  `json:"category"`
 }
 
 type PuppetReportMetricsLogEntry struct {
