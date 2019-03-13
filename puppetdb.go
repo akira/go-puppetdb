@@ -174,10 +174,15 @@ func getURL(host string, port int, ssl bool) string {
 
 // NewClient returns a http connection for your puppetdb instance.
 func NewClient(host string, port int, verbose bool) *Client {
-
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	client := &http.Client{Transport: tr}
 	return &Client{getURL(host, port, false), "", "", client, verbose}
+}
+
+// NewClientURL returns a http connection for your puppetdb instance.
+func NewClientURL(url *url.URL, verbose bool) *Client {
+	client := &http.Client{}
+	return &Client{url.String(), "", "", client, verbose}
 }
 
 // NewClientSSL returns a https connection for your puppetdb instance.
