@@ -10,7 +10,7 @@ Package contains interface to PuppetDB v3 API.  Interface is still work in progr
 
 ## Installation
 
-Run `go get github.com/akira/go-puppetdb`.
+Run `go get github.com/negast/go-puppetdb`.
 
 ## Usage
 
@@ -46,7 +46,7 @@ resp, err := client.NodeFacts("node123")
 Queries can be represented as an array of strings and turned into JSON:
 
 ```go
-query, err := puppetdb.QueryToJSON([]string{"=", "report", "aef00"})
+query, err := puppetdb.QueryToJson([]string{"=", "report", "aef00"})
 resp, res_err := client.Events(query, nil)
 ```
 

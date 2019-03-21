@@ -191,12 +191,12 @@ func NewClientSSL(host string, port int, key string, cert string, ca string, ver
 	flag.Parse()
 	cert2, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	// Load CA cert
 	caCert, err := ioutil.ReadFile(ca)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -241,12 +241,12 @@ func NewClientTimeoutSSL(host string, port int, key string, cert string, ca stri
 	flag.Parse()
 	cert2, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	// Load CA cert
 	caCert, err := ioutil.ReadFile(ca)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)

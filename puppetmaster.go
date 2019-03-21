@@ -39,6 +39,7 @@ type ProfilerExperimental struct {
 	FunctionMetrics *[]ProfilerFunctionMetric `json:"function-metrics"`
 	ResourceMetrics *[]ProfilerResourceMetric `json:"resource-metrics"`
 	CatalogMetrics  *[]ProfilerCatalogMetric  `json:"catalog-metrics"`
+	PuppetdbMetrics *[]ProfilerCatalogMetric  `json:"puppetdb-metrics"`
 }
 
 // ProfilerFunctionMetric is a struct that holds the data for a single profiler function metric
@@ -96,7 +97,7 @@ type JrubyExperimentalMetrics struct {
 	AverageLockWaitTime     int                      `json:"average-lock-wait-time"`
 	NumFreeJrubies          int                      `json:"num-free-jrubies"`
 	BorrowCount             int                      `json:"borrow-count"`
-	AverageRequestedJrubies int                      `json:"average-requested-jrubies"`
+	AverageRequestedJrubies float64                  `json:"average-requested-jrubies"`
 	BorrowTimeoutCount      int                      `json:"borrow-timeout-count"`
 	ReturnCount             int                      `json:"return-count"`
 	BorrowRetryCount        int                      `json:"borrow-retry-count"`
@@ -104,10 +105,10 @@ type JrubyExperimentalMetrics struct {
 	AverageBorrowTime       int                      `json:"average-borrow-time"`
 	NumJrubies              int                      `json:"num-jrubies"`
 	RequestedCount          int                      `json:"requested-count"`
-	QueueLimitHitRate       int                      `json:"queue-limit-hit-rate"`
+	QueueLimitHitRate       float64                  `json:"queue-limit-hit-rate"`
 	AverageLockHeldTime     int                      `json:"average-lock-held-time"`
 	QueueLimitHitCount      int                      `json:"queue-limit-hit-count"`
-	AverageFreeJrubies      int                      `json:"average-free-jrubies"`
+	AverageFreeJrubies      float64                  `json:"average-free-jrubies"`
 	NumPoolLocks            int                      `json:"num-pool-locks"`
 	AverageWaitTime         int                      `json:"average-wait-time"`
 }
@@ -189,9 +190,9 @@ type ServiceExperimental struct {
 
 // ServiceJVMMetric is a struct that holds metrics
 type ServiceJVMMetric struct {
-	CpuUsage        int                         `json:"cpu-usage"`
+	CpuUsage        float64                     `json:"cpu-usage"`
 	UptimeMs        int                         `json:"up-time-ms"`
-	GCCpuUsage      int                         `json:"gc-cpu-usage"`
+	GCCpuUsage      float64                     `json:"gc-cpu-usage"`
 	StartTimeMs     int                         `json:"start-time-ms"`
 	Threading       *ServiceJVMMetricThreading  `json:"threading"`
 	HeapMemory      *ServiceJVMMetricHeapMemory `json:"heap-memory"`
@@ -247,12 +248,12 @@ func NewClientSSLMaster(host string, port int, key string, cert string, ca strin
 	flag.Parse()
 	cert2, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	// Load CA cert
 	caCert, err := ioutil.ReadFile(ca)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
