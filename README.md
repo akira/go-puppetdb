@@ -46,7 +46,7 @@ resp, err := client.NodeFacts("node123")
 Queries can be represented as an array of strings and turned into JSON:
 
 ```go
-query, err := puppetdb.QueryToJson([]string{"=", "report", "aef00"})
+query, err := puppetdb.QueryToJSON([]string{"=", "report", "aef00"})
 resp, res_err := client.Events(query, nil)
 ```
 

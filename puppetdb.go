@@ -180,6 +180,12 @@ func NewClient(host string, port int, verbose bool) *Client {
 	return &Client{getURL(host, port, false), "", "", client, verbose}
 }
 
+// NewClientURL returns a http connection for your puppetdb instance.
+func NewClientURL(url *url.URL, verbose bool) *Client {
+	client := &http.Client{}
+	return &Client{url.String(), "", "", client, verbose}
+}
+
 // NewClientSSL returns a https connection for your puppetdb instance.
 func NewClientSSL(host string, port int, key string, cert string, ca string, verbose bool) *Client {
 	flag.Parse()
