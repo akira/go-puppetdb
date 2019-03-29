@@ -190,12 +190,12 @@ func NewClientSSL(host string, port int, key string, cert string, ca string, ver
 	flag.Parse()
 	cert2, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	// Load CA cert
 	caCert, err := ioutil.ReadFile(ca)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -212,6 +212,21 @@ func NewClientSSL(host string, port int, key string, cert string, ca string, ver
 
 }
 
+// NewClientSSLInsecure returns a https connection for your puppetdb instance but trusts self signed certificates.
+func NewClientSSLInsecure(host string, port int, verbose bool) *Client {
+	flag.Parse()
+	// Setup HTTPS client
+	tlsConfig := &tls.Config{
+
+		InsecureSkipVerify: true,
+	}
+	tlsConfig.BuildNameToCertificate()
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: transport}
+	return &Client{getURL(host, port, true), "", "", client, verbose}
+
+}
+
 // NewClientTimeout returns a http connection for your puppetdb instance with a timeout.
 func NewClientTimeout(host string, port int, verbose bool, timeout int) *Client {
 
@@ -225,12 +240,12 @@ func NewClientTimeoutSSL(host string, port int, key string, cert string, ca stri
 	flag.Parse()
 	cert2, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	// Load CA cert
 	caCert, err := ioutil.ReadFile(ca)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -373,17 +388,19 @@ func (c *Client) Metric(v interface{}, metric string) error {
 	return err
 }
 
-// MetricResourcesPerNode Gets the specified metric per node.
+// MetricResourcesPerNode Gets the average resources per node
 func (c *Client) MetricResourcesPerNode() (result float64, err error) {
 	ret := ValueMetricJSON{}
 	return ret.Value, c.Metric(&ret, "com.puppetlabs.puppetdb.query.population:type=default,name=avg-resources-per-node")
 }
 
+// MetricNumResources Gets the number of resources
 func (c *Client) MetricNumResources() (result float64, err error) {
 	ret := ValueMetricJSON{}
 	return ret.Value, c.Metric(&ret, "com.puppetlabs.puppetdb.query.population:type=default,name=num-resources")
 }
 
+// MetricNumResources Gets the number of nodes
 func (c *Client) MetricNumNodes() (result float64, err error) {
 	ret := ValueMetricJSON{}
 	return ret.Value, c.Metric(&ret, "com.puppetlabs.puppetdb.query.population:type=default,name=num-nodes")

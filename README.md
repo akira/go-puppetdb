@@ -43,6 +43,14 @@ resp, err := client.NodeFacts("node123")
 ...
 ```
 
+It's also possible to query the puppet master services api now
+```go
+client := puppetdb.NewClientSSLMaster("puppet", 8081,"key.pem", "cert.pem", "ca.pem", true)
+resp, err := client.Profiler()
+
+...
+```
+
 Queries can be represented as an array of strings and turned into JSON:
 
 ```go
@@ -57,3 +65,5 @@ Malte Krupa (temal-)
 Will Roberts (willroberts)
 
 Daniel Selans (dselans)
+
+Tim eyzermans (negast)
