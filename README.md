@@ -51,6 +51,17 @@ resp, err := client.Profiler()
 ...
 ```
 
+It's also possible to update/delete/view certificates
+```go
+client := puppetdb.NewClientSSLMaster("puppet", 8081,"key.pem", "cert.pem", "ca.pem", true)
+_, err, code := p.PuppetCertificateUpdateState("certname", "revoked")
+err, code := p.PuppetCertificateDelete("certname")
+certs, err := p.PuppetCertificates()
+cert, err := p.PuppetCertificate("certname")
+...
+...
+```
+
 Queries can be represented as an array of strings and turned into JSON:
 
 ```go

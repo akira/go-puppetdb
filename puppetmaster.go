@@ -1,9 +1,11 @@
 package puppetdb
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -27,6 +29,29 @@ type Profiler struct {
 	DetailLevel  string          `json:"detail_level"`
 	State        string          `json:"state"`
 	Status       *ProfilerStatus `json:"status"`
+}
+
+// PuppetCertificate is a struct that holds data for a puppet certificate entry
+type PuppetCertificate struct {
+	Name            string                       `json:"name"`
+	State           string                       `json:"state"`
+	DNSAltNames     []string                     `json:"dns_alt_names"`
+	SubjectAltNames []string                     `json:"subject_alt_names"`
+	Fingerprint     string                       `json:"fingerprint"`
+	Fingerprints    PuppetCertificateFingerPrint `json:"fingerprints"`
+}
+
+// PuppetCertificateFingerprint is a struct that holds data for a puppet certificate entry's fingerprint
+type PuppetCertificateFingerPrint struct {
+	SHA1    string `json:"SHA1"`
+	SHA256  string `json:"SHA256"`
+	SHA512  string `json:"SHA512"`
+	Default string `json:"default"`
+}
+
+// PuppetCertificateState is a struct that holds data for a puppet certificate state
+type PuppetCertificateState struct {
+	DesiredState string `json:"desired_state"`
 }
 
 // ProfilerStatus is a struct that the experimental json which holds the correct arrays
@@ -286,12 +311,61 @@ func NewClientSSLInsecureMaster(host string, port int, verbose bool) *ClientMast
 }
 
 func (c *ClientMaster) httpGet(endpoint string) (resp *http.Response, err error) {
+	metrics := []string{"jruby-metrics", "master", "puppet-profiler", "status-service"}
 	base := strings.TrimRight(c.BaseURL, "/")
-	PUrl := fmt.Sprintf("%s/status/v1/services/%s?level=debug", base, endpoint)
+	PUrl := ""
+	if stringInSlice(endpoint, metrics) {
+		PUrl = fmt.Sprintf("%s/status/v1/services/%s?level=debug", base, endpoint)
+	} else {
+		PUrl = fmt.Sprintf("%s%s", base, endpoint)
+	}
+	if PUrl == "" {
+		return nil, errors.New("Endpoint does not exist")
+	}
+
 	if c.verbose == true {
 		log.Printf(PUrl)
 	}
 	return c.httpClient.Get(PUrl)
+}
+
+func (c *ClientMaster) httpPut(endpoint string, values interface{}) (resp *http.Response, err error) {
+	base := strings.TrimRight(c.BaseURL, "/")
+	PUrl := fmt.Sprintf("%s%s", base, endpoint)
+
+	if c.verbose == true {
+		log.Printf(PUrl)
+	}
+	if values != nil {
+		json, err := json.Marshal(values)
+		req, err := http.NewRequest(http.MethodPut, PUrl, bytes.NewBuffer(json))
+		if err != nil {
+			log.Println(err.Error())
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		return c.httpClient.Do(req)
+
+	}
+
+	return nil, errors.New("No values specified")
+
+}
+
+func (c *ClientMaster) httpDelete(endpoint string) (resp *http.Response, err error) {
+	base := strings.TrimRight(c.BaseURL, "/")
+	PUrl := fmt.Sprintf("%s%s", base, endpoint)
+
+	if c.verbose == true {
+		log.Printf(PUrl)
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, PUrl, nil)
+	if err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+	return c.httpClient.Do(req)
 }
 
 // Get gets the given url and retruns the result. In form of the given interface.
@@ -309,6 +383,54 @@ func (c *ClientMaster) Get(v interface{}, path string) error {
 	}
 	json.NewDecoder(resp.Body).Decode(&v)
 	return err
+}
+
+// Put request to the given url and returns the status code
+func (c *ClientMaster) Put(v interface{}, path string, values interface{}) (error, int) {
+	// https://gist.github.com/slav123/cbb3309052de5a870667
+	resp, err := c.httpPut(path, values)
+	statusCode := -1
+	if resp != nil {
+		statusCode = resp.StatusCode
+	}
+	if err != nil {
+		log.Print(err.Error())
+		return err, statusCode
+	}
+	defer resp.Body.Close()
+	if err != nil {
+		log.Print(err)
+		return err, statusCode
+	}
+	if c.verbose {
+		contents, _ := ioutil.ReadAll(resp.Body)
+		log.Println(string(contents))
+	}
+	json.NewDecoder(resp.Body).Decode(&v)
+	return err, statusCode
+}
+
+// Delete request to the given url and returns the result code
+func (c *ClientMaster) Delete(path string) (error, int) {
+	resp, err := c.httpDelete(path)
+	statusCode := -1
+	if resp != nil {
+		statusCode = resp.StatusCode
+	}
+	if err != nil {
+		log.Print(err.Error())
+		return err, statusCode
+	}
+	defer resp.Body.Close()
+	if err != nil {
+		log.Print(err)
+		return err, statusCode
+	}
+	if c.verbose {
+		contents, _ := ioutil.ReadAll(resp.Body)
+		log.Println(string(contents))
+	}
+	return err, statusCode
 }
 
 // profiler returns a profiler metrics object
@@ -337,4 +459,45 @@ func (c *ClientMaster) Service() (ServiceMetrics, error) {
 	ret := ServiceMetrics{}
 	err := c.Get(&ret, "status-service")
 	return ret, err
+}
+
+// PuppetCertificatesreturns an array of puppet certificates
+func (c *ClientMaster) PuppetCertificates() ([]PuppetCertificate, error) {
+	ret := []PuppetCertificate{}
+	err := c.Get(&ret, "/puppet-ca/v1/certificate_statuses/any")
+	return ret, err
+}
+
+// PuppetCertificate returns a single entry of a puppet certificate
+func (c *ClientMaster) PuppetCertificate(certname string) (PuppetCertificate, error) {
+	ret := PuppetCertificate{}
+	// /puppet-ca/v1/certificate/
+	err := c.Get(&ret, "/puppet-ca/v1/certificate_status/"+certname)
+	return ret, err
+}
+
+// PuppetCertificateUpdateStatereturns a single entry of a puppet certificate
+func (c *ClientMaster) PuppetCertificateUpdateState(certname string, state string) (PuppetCertificateState, error, int) {
+	ret := PuppetCertificateState{}
+	st := PuppetCertificateState{DesiredState: state}
+	// /puppet-ca/v1/certificate/
+	err, code := c.Put(&ret, "/puppet-ca/v1/certificate_status/"+certname, st)
+	return ret, err, code
+}
+
+// PuppetCertificateDelete deletes a certificate entry
+func (c *ClientMaster) PuppetCertificateDelete(certname string) (error, int) {
+	// /puppet-ca/v1/certificate/
+	err, code := c.Delete("/puppet-ca/v1/certificate_status/" + certname)
+	return err, code
+}
+
+// stringInSlice checks wether a string is in a slice https://stackoverflow.com/questions/15323767/does-go-have-if-x-in-construct-similar-to-python
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
